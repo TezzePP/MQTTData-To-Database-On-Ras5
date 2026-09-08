@@ -1,4 +1,4 @@
-# MQTT Data to Database on Raspberry Pi
+# MQTT Data Collection and Supabase Integration on Raspberry Pi 5
 
 A Python-based IoT project that receives data through **MQTT** and stores it in a database running on a **Raspberry Pi 5**.
 
