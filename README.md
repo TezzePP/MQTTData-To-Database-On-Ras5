@@ -1,41 +1,71 @@
-# MQTT Data Collection and Supabase Integration on Raspberry Pi 5
+# MQTT Data to Supabase on Raspberry Pi 5
 
-A Python-based IoT project that receives data through **MQTT** and stores it in a database running on a **Raspberry Pi 5**.
+A Python application running on a **Raspberry Pi 5** that receives sensor data from a local **MQTT broker** and sends the data to **Supabase** for storage.
 
-The project was created to experiment with MQTT communication, data handling and persistent storage on a small Linux-based device.
+The Raspberry Pi acts as the MQTT broker, allowing connected devices to publish sensor measurements locally. A Python application running on the same Raspberry Pi subscribes to the relevant MQTT topic, processes the incoming data and sends it to Supabase.
 
 ## Overview
 
-The application acts as a bridge between MQTT messages and a database.
-
-The basic flow is:
+The project creates a simple connection between local IoT devices and a cloud database.
 
 ```text
-MQTT Device
-     │
-     ▼
- MQTT Broker
-     │
-     ▼
-Python MQTT Client
-     │
-     ▼
-Message Handler
-     │
-     ▼
-Database
+IoT Sensor / Device
+        │
+        │ MQTT
+        ▼
+┌────────────────────┐
+│   Raspberry Pi 5   │
+│                    │
+│    MQTT Broker     │
+│         │          │
+│         ▼          │
+│    Python App      │
+│         │          │
+└─────────┼──────────┘
+          │
+          │ Supabase API
+          ▼
+     ┌──────────┐
+     │ Supabase │
+     │ Database │
+     └──────────┘
 ```
 
-The application starts through `run.py`, which loads the application and starts the MQTT client.
+The Raspberry Pi hosts the MQTT broker. Devices publish sensor data to the broker, while the Python application subscribes to the MQTT topic and forwards the received measurements to Supabase.
+
+## Data
+
+The application currently handles the following values:
+
+| Value         | Description                               |
+| ------------- | ----------------------------------------- |
+| `temperature` | Temperature measurement                   |
+| `humidity`    | Humidity measurement                      |
+| `co2`         | CO₂ measurement                           |
+| `device_id`   | Identifier of the device sending the data |
+
+The received values are stored in the `measurements` table in Supabase.
+
+### Example MQTT Payload
+
+```json
+{
+    "temperature": 21.5,
+    "humidity": 45.2,
+    "co2": 620,
+    "device_id": "sensor-01"
+}
+```
 
 ## Technologies
 
 * **Python**
-* **MQTT**
 * **Raspberry Pi 5**
+* **MQTT**
+* **Paho MQTT**
+* **Supabase**
+* **JSON**
 * **Linux**
-* **Database**
-* **Paho MQTT** / MQTT client library
 
 ## Project Structure
 
@@ -49,55 +79,41 @@ MQTTData-To-Database-On-Ras5/
 │   ├── handlers.py
 │   └── mqtt_client.py
 │
-├── run.py
 ├── requirements.txt
+├── run.py
 └── .gitignore
 ```
 
 ### `mqtt_client.py`
 
-Handles the MQTT connection and receiving messages from the broker.
+Handles the MQTT client connection and subscribes to the configured MQTT topic to receive incoming messages.
 
 ### `handlers.py`
 
-Contains the logic for processing incoming MQTT messages.
+Processes incoming MQTT messages and converts the received JSON payload into data that can be stored in the database.
 
 ### `database.py`
 
-Handles communication with the database and storing received data.
+Handles the connection to Supabase and stores the received measurements in the `measurements` table.
 
 ### `config.py`
 
-Contains configuration used by the application.
+Contains the configuration used by the application, including the MQTT and Supabase settings.
 
 ### `run.py`
 
-The entry point for the application. It loads the application directory and starts the MQTT client.
+The entry point for the Python application.
 
 ## Data Flow
 
-When a device publishes a message to an MQTT topic, the application receives the message through the MQTT client.
+When a sensor sends a measurement:
 
-The message is then passed to the application logic and stored in the database.
-
-```text
-Sensor / Device
-       │
-       │ MQTT
-       ▼
-MQTT Broker
-       │
-       │
-       ▼
-Raspberry Pi 5
-       │
-       ├── MQTT Client
-       │
-       ├── Message Handler
-       │
-       ▼
-   Database
-```
+1. The sensor publishes a JSON message to an MQTT topic.
+2. The MQTT broker running on the Raspberry Pi receives the message.
+3. The Python application subscribes to the topic and receives the message.
+4. The application processes the JSON payload.
+5. The processed data is sent to Supabase.
+6. Supabase stores the measurement in the `measurements` table.
 
 ## Installation
 
@@ -108,15 +124,38 @@ git clone https://github.com/TezzePP/MQTTData-To-Database-On-Ras5.git
 cd MQTTData-To-Database-On-Ras5
 ```
 
-Install the Python dependencies:
+Install the required Python packages:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Configure the MQTT broker and database connection in the application configuration.
+The project uses **Paho MQTT** for MQTT communication and the **Supabase Python client** for sending data to Supabase.
 
-## Running the Application
+## Configuration
+
+The application requires configuration for both the MQTT broker and Supabase.
+
+Typical configuration includes:
+
+### MQTT
+
+* MQTT broker address
+* MQTT port
+* MQTT username
+* MQTT password
+* MQTT topic
+
+### Supabase
+
+* Supabase URL
+* Supabase key
+
+Configuration values are loaded by the application.
+
+**Do not commit real credentials to GitHub.** Use environment variables or another secure configuration method when storing sensitive configuration.
+
+## Running
 
 Start the application with:
 
@@ -124,23 +163,31 @@ Start the application with:
 python run.py
 ```
 
-The application will start the MQTT client and begin processing incoming messages.
+Once running, the Python application subscribes to the configured MQTT topic and processes incoming sensor data.
+
+The Raspberry Pi therefore acts as both:
+
+* The **MQTT broker**
+* The **host for the Python data-processing application**
+
+The processed measurements are then sent to Supabase for storage.
 
 ## What I Learned
 
 This project gave me practical experience with:
 
 * MQTT communication
-* IoT data collection
-* Python application structure
-* Working with a Raspberry Pi
-* Database integration
-* Handling incoming data
-* Running Python applications on Linux
-* Separating MQTT, processing and database logic
+* Running an MQTT broker on a Raspberry Pi
+* Raspberry Pi and Linux
+* Python
+* JSON data processing
+* Supabase
+* Sending data from a local system to a cloud database
+* Working with MQTT publishers and subscribers
+* Separating MQTT handling, data processing and database operations
 
 ## Project Status
 
-This is a learning project focused on experimenting with MQTT-based data collection and storing IoT data on a Raspberry Pi.
+This is a personal learning project demonstrating a simple IoT data pipeline.
 
-The project can be extended with additional sensors, MQTT topics, database functionality and data visualization.
+The project focuses on receiving sensor measurements through an MQTT broker running on a Raspberry Pi 5 and forwarding the data to Supabase for storage.
